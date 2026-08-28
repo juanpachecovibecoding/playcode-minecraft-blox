@@ -1,4 +1,4 @@
-﻿// Minecraft Hub World (Plains & Forest Biome)
+// Minecraft Hub World (Plains & Forest Biome)
 // Built with voxel blocks, oak trees, cobblestone paths, obsidian Nether portals,
 // torches, voxel flowers, beacon well, 3D voxel mobs, and camera-facing portal signs.
 
@@ -501,24 +501,32 @@ export function startExplore(onEnter, opts = {}) {
   // Use the explore-prompt button situated above the input layer
   const prompt = document.getElementById("explore-prompt");
   let activePortal = null;
+  let triggering = false;
 
-  function onPromptTrigger(e) {
+  function triggerPortal(portalKey) {
+    if (triggering || !portalKey) return;
+    triggering = true;
+    sfx.click();
+    destroy();
+    if (onEnter) onEnter(portalKey);
+  }
+
+  const onPromptClick = (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!activePortal) return;
-    sfx.click();
-    destroy();
-    if (onEnter) onEnter(activePortal.key);
-  }
+    if (activePortal) triggerPortal(activePortal.key);
+  };
 
-  prompt.addEventListener("click", onPromptTrigger);
-  prompt.addEventListener("pointerdown", onPromptTrigger);
+  prompt.onclick = onPromptClick;
+  prompt.onpointerdown = (e) => { if (e) e.stopPropagation(); };
+  prompt.onpointerup = onPromptClick;
 
   const onKey = (e) => {
     if (activePortal && (e.key === "Enter" || e.key === "e" || e.key === "E")) {
-      onPromptTrigger(e);
+      e.preventDefault();
+      triggerPortal(activePortal.key);
     }
   };
   window.addEventListener("keydown", onKey);
@@ -569,6 +577,13 @@ export function startExplore(onEnter, opts = {}) {
 
       const dPad = Math.hypot(player.pos.x - p.pos.x, player.pos.z - p.pos.z);
       const dPortal = Math.hypot(player.pos.x - p.portalPos.x, player.pos.z - p.portalPos.z);
+
+      // Walk directly into the portal energy to enter immediately (like Minecraft!)
+      if (dPortal < 1.4) {
+        triggerPortal(p.key);
+        return;
+      }
+
       const d = Math.min(dPad, dPortal);
       if (d < minPortalDist) {
         minPortalDist = d;
@@ -630,8 +645,9 @@ export function startExplore(onEnter, opts = {}) {
     cancelAnimationFrame(rafId);
     window.removeEventListener("resize", handleResize);
     window.removeEventListener("keydown", onKey);
-    prompt.removeEventListener("click", onPromptTrigger);
-    prompt.removeEventListener("pointerdown", onPromptTrigger);
+    prompt.onclick = null;
+    prompt.onpointerdown = null;
+    prompt.onpointerup = null;
     prompt.classList.add("hidden");
     controls.destroy();
     hudInteractions.destroy();
