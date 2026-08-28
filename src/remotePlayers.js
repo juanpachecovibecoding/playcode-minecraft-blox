@@ -5,8 +5,9 @@
 import * as THREE from "three";
 import { createAvatar } from "./avatar.js";
 
-export function createRemotePlayers() {
+export function createRemotePlayers(scene = null) {
   const group = new THREE.Group();
+  if (scene) scene.add(group);
   const peers = new Map(); // id -> { avatar, cur:{x,y,z}, target:{x,y,z}, ry, anim, name, color }
 
   function ensure(id, name, color) {
@@ -30,12 +31,14 @@ export function createRemotePlayers() {
   }
 
   // a state packet from the network: { id, x, y, z, ry, anim }
-  function applyState(packet) {
-    const p = peers.get(packet.id);
-    if (!p) return; // roster will create it on presence sync
-    p.target = { x: packet.x, y: packet.y, z: packet.z };
-    p.targetRy = packet.ry ?? p.targetRy;
-    p.anim = packet.anim || "idle";
+  function applyState(packet, maybePacket) {
+    // support applyState(id, m) or applyState(packet)
+    const data = typeof packet === "string" ? { id: packet, ...maybePacket } : packet;
+    const p = peers.get(data.id);
+    if (!p) return;
+    p.target = { x: data.x, y: data.y, z: data.z };
+    p.targetRy = data.ry ?? p.targetRy;
+    p.anim = data.anim || "idle";
   }
 
   // reconcile to the presence roster (others only - caller filters out self)
@@ -54,20 +57,23 @@ export function createRemotePlayers() {
     group.remove(p.avatar.root);
     p.avatar.root.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      // never dispose materials flagged as shared (e.g. the outline material) -
-      // other avatars still use them.
       if (o.material && !o.material.userData?.shared) o.material.dispose();
     });
     peers.delete(id);
   }
 
-  function update(dt, camera) {
-    const k = 1 - Math.pow(0.0001, dt); // smoothing toward target
+  function update(dtOrId, cameraOrState) {
+    if (typeof dtOrId === "string") {
+      applyState(dtOrId, cameraOrState);
+      return;
+    }
+    const dt = dtOrId;
+    const camera = cameraOrState;
+    const k = 1 - Math.pow(0.0001, dt);
     for (const p of peers.values()) {
       p.cur.x += (p.target.x - p.cur.x) * k;
       p.cur.y += (p.target.y - p.cur.y) * k;
       p.cur.z += (p.target.z - p.cur.z) * k;
-      // shortest-path angle lerp
       let d = p.targetRy - p.ry;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -78,13 +84,12 @@ export function createRemotePlayers() {
     }
   }
 
-  // snapshot of where each peer currently is (for proximity interactions)
   function list() {
     const out = [];
     for (const [id, p] of peers) out.push({ id, name: p.name, pos: { x: p.cur.x, y: p.cur.y, z: p.cur.z } });
     return out;
   }
-  // make a peer play a one-shot emote (e.g. they high-fived us back)
+
   function playEmote(id, anim, ms = 1800) {
     const p = peers.get(id);
     if (!p) return;
@@ -93,8 +98,21 @@ export function createRemotePlayers() {
     p._emoteT = setTimeout(() => { if (p.anim === anim) p.anim = "idle"; }, ms);
   }
 
-  // tear every peer down (avatars + pending emote timers) when leaving a mode
   function destroy() { for (const id of [...peers.keys()]) remove(id); }
 
-  return { group, ensure, applyState, syncRoster, remove, update, list, playEmote, destroy, count: () => peers.size };
+  return {
+    group,
+    ensure,
+    add: (p) => ensure(p.id, p.name, p.color),
+    applyState,
+    syncRoster,
+    remove,
+    update,
+    tick: update,
+    emote: playEmote,
+    playEmote,
+    list,
+    destroy,
+    count: () => peers.size
+  };
 }

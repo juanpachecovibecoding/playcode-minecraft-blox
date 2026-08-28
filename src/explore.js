@@ -526,7 +526,7 @@ export function startExplore(onEnter, opts = {}) {
     avatar.root.rotation.y = player.facing;
     avatar.update(anim, dt, camera.cam);
 
-    camera.update(player.pos, dt, colliders);
+    camera.follow(player.pos, dt, { facing: player.facing, moving });
 
     // Rotate Central Logo
     logoGroup.rotation.y += dt * 0.8;

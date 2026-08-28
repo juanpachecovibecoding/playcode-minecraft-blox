@@ -70,7 +70,12 @@ export function createFollowCamera(aspect, opts = {}) {
     cam.lookAt(playerPos.x, playerPos.y + LOOK_AT_Y, playerPos.z);
   }
 
-  return { cam, state, follow, snap, rotate };
+  function resize(aspect) {
+    cam.aspect = aspect;
+    cam.updateProjectionMatrix();
+  }
+
+  return { cam, state, follow, update: follow, snap, rotate, resize };
 }
 
 // Convert camera-relative intent (fwd/right) into a world-space direction, given
