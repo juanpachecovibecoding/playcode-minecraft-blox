@@ -1,6 +1,6 @@
-// Minecraft Hub World (Plains & Forest Biome)
+﻿// Minecraft Hub World (Plains & Forest Biome)
 // Built with voxel blocks, oak trees, cobblestone paths, obsidian Nether portals,
-// torches, voxel flowers, beacon well, and 3D voxel mobs.
+// torches, voxel flowers, beacon well, 3D voxel mobs, and camera-facing portal signs.
 
 import * as THREE from "three";
 import { createPlayer, updatePlayer, respawn } from "./player.js";
@@ -106,7 +106,6 @@ export function startExplore(onEnter, opts = {}) {
 
   // 2. Central Minecraft Fountain / Beacon Well
   const fountain = new THREE.Group();
-  // Cobblestone basin rim
   const basinMat = getBlockMaterial("stone_brick");
   const basin = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.8, 5.4), basinMat);
   basin.position.y = 0.4;
@@ -114,24 +113,20 @@ export function startExplore(onEnter, opts = {}) {
   basin.receiveShadow = true;
   fountain.add(basin);
 
-  // Water block inside basin
   const waterMesh = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.4, 4.4), getBlockMaterial("water"));
   waterMesh.position.y = 0.65;
   fountain.add(waterMesh);
 
-  // Diamond block base
   const diamondBase = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 2), getBlockMaterial("diamond_block"));
   diamondBase.position.y = 0.7;
   diamondBase.castShadow = true;
   fountain.add(diamondBase);
 
-  // Beacon block in center
   const beaconMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), getBlockMaterial("obsidian"));
   beaconMesh.position.y = 1.6;
   beaconMesh.castShadow = true;
   fountain.add(beaconMesh);
 
-  // Beacon Light Beam (vertical cylinder shooting up)
   const beamMat = new THREE.MeshBasicMaterial({
     color: 0x5fedd9,
     transparent: true,
@@ -183,13 +178,11 @@ export function startExplore(onEnter, opts = {}) {
   // 3. Minecraft Oak Trees
   function makeMinecraftTree(x, z, h = 4) {
     const tg = new THREE.Group();
-    // Wood log trunk
     for (let y = 0; y < h; y++) {
       const log = createVoxelBlock("log", 1, 1, 1);
       log.position.set(0, y + 0.5, 0);
       tg.add(log);
     }
-    // Leaves volume (3x3 top, 5x5 middle)
     const leavesMat = getBlockMaterial("oak_leaves");
     const leafGeo5 = new THREE.BoxGeometry(4.8, 1.8, 4.8);
     const leavesLower = new THREE.Mesh(leafGeo5, leavesMat);
@@ -208,7 +201,6 @@ export function startExplore(onEnter, opts = {}) {
     colliders.push(aabb(x, h / 2, z, 1.2, h, 1.2));
   }
 
-  // Scatter trees around perimeter
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2 + 0.25;
     const rr = 23 + (i % 3) * 2.5;
@@ -222,10 +214,8 @@ export function startExplore(onEnter, opts = {}) {
 
   function makeTorch(x, y, z) {
     const tg = new THREE.Group();
-    // Wooden stick
     const stick = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), getBlockMaterial("oak_planks"));
     stick.position.y = 0.2;
-    // Flame tip
     const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
     const flame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.12), flameMat);
     flame.position.y = 0.42;
@@ -235,7 +225,6 @@ export function startExplore(onEnter, opts = {}) {
     scene.add(tg);
   }
 
-  // Fence circle
   for (let i = 0; i < 48; i++) {
     const a = (i / 48) * Math.PI * 2;
     const x = Math.cos(a) * (R + 1), z = Math.sin(a) * (R + 1);
@@ -249,10 +238,7 @@ export function startExplore(onEnter, opts = {}) {
     rail.lookAt(0, 0.75, 0);
     scene.add(rail);
 
-    // Torches every 6th post
-    if (i % 6 === 0) {
-      makeTorch(x, 1.2, z);
-    }
+    if (i % 6 === 0) makeTorch(x, 1.2, z);
   }
 
   // 5. Minecraft Flowers (Red Poppies & Yellow Dandelions)
@@ -299,19 +285,17 @@ export function startExplore(onEnter, opts = {}) {
     }
   }
 
-  // 7. Minecraft 3D Voxel Animals / Mobs roaming around
+  // 7. Minecraft 3D Voxel Animals / Mobs
   const mobs = [];
   function createVoxelMob(type, x, z) {
     const mg = new THREE.Group();
     const m = (c) => new THREE.MeshLambertMaterial({ color: c });
 
     if (type === "sheep") {
-      // White wool body + head
       const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 1.4), m(0xededed));
       body.position.y = 0.8;
       const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.6), m(0xf5c596));
       head.position.set(0, 1.1, 0.8);
-      // 4 legs
       for (const [lx, lz] of [[-0.3, -0.4], [0.3, -0.4], [-0.3, 0.4], [0.3, 0.4]]) {
         const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.5, 0.22), m(0xf5c596));
         leg.position.set(lx, 0.25, lz);
@@ -331,7 +315,7 @@ export function startExplore(onEnter, opts = {}) {
         mg.add(leg);
       }
       mg.add(body, head, snout);
-    } else { // wolf / dog
+    } else {
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.6, 1.1), m(0xd4d4d4));
       body.position.y = 0.65;
       const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.5), m(0xd4d4d4));
@@ -359,6 +343,36 @@ export function startExplore(onEnter, opts = {}) {
   createVoxelMob("wolf", 0, -10);
 
   // 8. 3D Voxel Activity Portals (Nether Portal, Temple, Cabins)
+  function makePortalBillboard(emoji, name) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 128;
+    const sctx = canvas.getContext("2d");
+    sctx.imageSmoothingEnabled = false;
+
+    // Dark Minecraft sign background with white border
+    sctx.fillStyle = "rgba(24, 16, 8, 0.88)";
+    sctx.fillRect(8, 12, 496, 104);
+    sctx.strokeStyle = "#ffffff";
+    sctx.lineWidth = 4;
+    sctx.strokeRect(8, 12, 496, 104);
+
+    sctx.font = "bold 44px monospace, sans-serif";
+    sctx.fillStyle = "#ffff55";
+    sctx.textAlign = "center";
+    sctx.textBaseline = "middle";
+    sctx.fillText(`${emoji} ${name}`, 256, 64);
+
+    const signTex = new THREE.CanvasTexture(canvas);
+    signTex.magFilter = THREE.NearestFilter;
+    signTex.minFilter = THREE.NearestFilter;
+    signTex.colorSpace = THREE.SRGBColorSpace;
+
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: signTex, transparent: true, depthTest: false }));
+    sprite.scale.set(4.4, 1.1, 1);
+    return sprite;
+  }
+
   const portals = [];
   const ringR = 19;
 
@@ -395,7 +409,7 @@ export function startExplore(onEnter, opts = {}) {
       b.castShadow = true; portalGroup.add(b);
     }
 
-    // Portal Energy Interior (Glowing purple plane)
+    // Portal Energy Interior (Glowing purple block)
     const portalEnergyMat = getBlockMaterial("nether_portal");
     const energyMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.0, 0.3), portalEnergyMat);
     energyMesh.position.set(0, 2.5, 0);
@@ -406,32 +420,31 @@ export function startExplore(onEnter, opts = {}) {
     makeTorch(px + Math.cos(rot + Math.PI / 2) * 1.6, 2.8, pz + Math.sin(rot + Math.PI / 2) * 1.6);
     makeTorch(px - Math.cos(rot + Math.PI / 2) * 1.6, 2.8, pz - Math.sin(rot + Math.PI / 2) * 1.6);
 
-    // Minecraft Wooden Sign Board above Portal
-    const signCvs = document.createElement("canvas");
-    signCvs.width = 512; signCvs.height = 128;
-    const sctx = signCvs.getContext("2d");
-    sctx.imageSmoothingEnabled = false;
-    sctx.fillStyle = "#8a6639"; sctx.fillRect(0, 0, 512, 128);
-    sctx.strokeStyle = "#4a3318"; sctx.lineWidth = 6; sctx.strokeRect(6, 6, 500, 116);
-    sctx.font = "bold 44px monospace, sans-serif"; sctx.fillStyle = "#ffffff"; sctx.textAlign = "center"; sctx.textBaseline = "middle";
-    sctx.fillText(`${z.emoji} ${z.name}`, 256, 64);
-    const signTex = new THREE.CanvasTexture(signCvs);
-    signTex.magFilter = THREE.NearestFilter;
-    const signPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.6, 0.9),
-      new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide })
-    );
-    signPlane.position.set(0, 5.4, 0.1);
-    portalGroup.add(signPlane);
+    // Billboard Sprite Sign (always faces camera)
+    const signSprite = makePortalBillboard(z.emoji, z.name);
+    signSprite.position.set(0, 5.8, 0);
+    portalGroup.add(signSprite);
 
     // Glowing Activation Pad in front of portal
     const padMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2.8, 0.12, 2.8),
+      new THREE.BoxGeometry(2.8, 0.14, 2.8),
       new THREE.MeshLambertMaterial({ color: z.color })
     );
-    padMesh.position.set(0, 0.06, 2.2);
+    padMesh.position.set(0, 0.07, 2.2);
     padMesh.receiveShadow = true;
     portalGroup.add(padMesh);
+
+    // Rotating Glowing Rune Ring on the pad
+    const runeRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.2, 0.1, 8, 20),
+      new THREE.MeshBasicMaterial({ color: z.color })
+    );
+    runeRing.rotation.x = Math.PI / 2;
+    runeRing.position.set(0, 0.16, 2.2);
+    markBloom(runeRing);
+    portalGroup.add(runeRing);
+
+    scene.add(portalGroup);
 
     portalGroup.updateMatrixWorld(true);
     const padWorld = new THREE.Vector3();
@@ -445,7 +458,9 @@ export function startExplore(onEnter, opts = {}) {
       pos: { x: padWorld.x, z: padWorld.z },
       portalPos: { x: px, z: pz },
       group: portalGroup,
-      energy: energyMesh
+      energy: energyMesh,
+      ring: runeRing,
+      sign: signSprite
     });
   });
 
@@ -483,22 +498,30 @@ export function startExplore(onEnter, opts = {}) {
     voice = createVoice({ code: mp.code, name: mp.name });
   }
 
-  // Enter Portal UI Prompt
-  const enterBtn = document.createElement("button");
-  enterBtn.id = "explore-enter-btn";
-  enterBtn.className = "explore-enter-btn hidden";
-  root.appendChild(enterBtn);
+  // Use the explore-prompt button situated above the input layer
+  const prompt = document.getElementById("explore-prompt");
   let activePortal = null;
 
-  const handleEnter = (e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
+  function onPromptTrigger(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!activePortal) return;
     sfx.click();
     destroy();
     if (onEnter) onEnter(activePortal.key);
+  }
+
+  prompt.addEventListener("click", onPromptTrigger);
+  prompt.addEventListener("pointerdown", onPromptTrigger);
+
+  const onKey = (e) => {
+    if (activePortal && (e.key === "Enter" || e.key === "e" || e.key === "E")) {
+      onPromptTrigger(e);
+    }
   };
-  enterBtn.addEventListener("click", handleEnter);
-  enterBtn.addEventListener("pointerdown", handleEnter);
+  window.addEventListener("keydown", onKey);
 
   let alive = true, last = performance.now(), elapsed = 0, rafId = 0;
 
@@ -536,27 +559,30 @@ export function startExplore(onEnter, opts = {}) {
     // Rotate Central Logo
     logoGroup.rotation.y += dt * 0.8;
 
-    // Portal energy pulse & interaction check
+    // Portal energy & rune animation, distance check
     let nearestPortal = null;
     let minPortalDist = 999;
     for (const p of portals) {
-      p.energy.material.opacity = 0.7 + Math.sin(elapsed * 4 + p.pos.x) * 0.2;
+      p.energy.material.opacity = 0.75 + Math.sin(elapsed * 4 + p.pos.x) * 0.2;
+      p.ring.rotation.z += dt * 2.5;
+      p.ring.scale.setScalar(1 + Math.sin(elapsed * 3 + p.pos.x) * 0.08);
+
       const dPad = Math.hypot(player.pos.x - p.pos.x, player.pos.z - p.pos.z);
       const dPortal = Math.hypot(player.pos.x - p.portalPos.x, player.pos.z - p.portalPos.z);
       const d = Math.min(dPad, dPortal);
       if (d < minPortalDist) {
         minPortalDist = d;
-        if (d < 3.5) nearestPortal = p;
+        if (d < 3.8) nearestPortal = p;
       }
     }
 
     if (nearestPortal !== activePortal) {
       activePortal = nearestPortal;
       if (activePortal) {
-        enterBtn.innerHTML = `<span>Entrar a <b>${activePortal.name}</b> ${activePortal.emoji}</span>`;
-        enterBtn.classList.remove("hidden");
+        prompt.innerHTML = `<span>Entrar a <b>${activePortal.name}</b> ${activePortal.emoji} <small style="opacity:0.8; font-size:14px;">[E]</small></span>`;
+        prompt.classList.remove("hidden");
       } else {
-        enterBtn.classList.add("hidden");
+        prompt.classList.add("hidden");
       }
     }
 
@@ -603,9 +629,12 @@ export function startExplore(onEnter, opts = {}) {
     alive = false;
     cancelAnimationFrame(rafId);
     window.removeEventListener("resize", handleResize);
+    window.removeEventListener("keydown", onKey);
+    prompt.removeEventListener("click", onPromptTrigger);
+    prompt.removeEventListener("pointerdown", onPromptTrigger);
+    prompt.classList.add("hidden");
     controls.destroy();
     hudInteractions.destroy();
-    if (enterBtn.parentElement) enterBtn.remove();
     if (net) net.destroy();
     if (voice) voice.destroy();
     renderer.dispose();
@@ -619,12 +648,10 @@ export function startExplore(onEnter, opts = {}) {
 function makeMinecraftSky() {
   const skyGroup = new THREE.Group();
 
-  // Sky dome / background
   const skyMat = new THREE.MeshBasicMaterial({ color: 0x82b4ff, side: THREE.BackSide });
   const skyDome = new THREE.Mesh(new THREE.SphereGeometry(140, 16, 16), skyMat);
   skyGroup.add(skyDome);
 
-  // Square Sun
   const sunTex = getSunTex();
   const sunPlane = new THREE.Mesh(
     new THREE.PlaneGeometry(24, 24),
@@ -635,7 +662,6 @@ function makeMinecraftSky() {
   markBloom(sunPlane);
   skyGroup.add(sunPlane);
 
-  // Flat Voxel Clouds
   const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.88 });
   for (let i = 0; i < 12; i++) {
     const cw = 16 + (i % 3) * 8;
