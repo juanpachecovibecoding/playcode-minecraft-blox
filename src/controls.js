@@ -76,6 +76,7 @@ export function createControls() {
 
   const onDown = (e) => {
     if (!enabled) return;
+    if (e.target !== layer) return; // let UI buttons above handle their own events
     const role = roleFor(e);
     if (!role) return;
     layer.setPointerCapture?.(e.pointerId);

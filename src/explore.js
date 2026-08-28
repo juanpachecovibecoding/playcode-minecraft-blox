@@ -506,7 +506,7 @@ export function startExplore(onEnter, opts = {}) {
   function triggerPortal(portalKey) {
     if (triggering || !portalKey) return;
     triggering = true;
-    sfx.click();
+    sfx.checkpoint();
     destroy();
     if (onEnter) onEnter(portalKey);
   }
