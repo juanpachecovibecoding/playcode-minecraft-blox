@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer-core";
+const CHROME = "/Users/neilbusque/.cache/puppeteer/chrome/mac_arm-149.0.7827.22/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args:["--use-gl=angle","--use-angle=swiftshader","--enable-webgl","--no-sandbox"] });
+const page = await browser.newPage(); await page.setViewport({width:1000,height:640});
+const errors=[]; page.on("pageerror",e=>errors.push(e.message)); page.on("console",m=>{if(m.type()==="error")errors.push("c:"+m.text());});
+await page.goto("https://brainblox-flax.vercel.app/?v="+Date.now(),{waitUntil:"networkidle2",timeout:30000}); await sleep(700);
+const mpEnabled = await page.$eval("#lobby-msg",e=>e.textContent.trim()==="").catch(()=>false);
+const devStripped = await page.evaluate(()=>typeof window.__bbPlayer==="undefined");
+await page.type("#name-input","V"); await page.evaluate(()=>document.querySelector("#btn-solo").click()); await sleep(2500);
+const worldCanvas = await page.$eval("#game-root canvas",c=>c.width>0).catch(()=>false);
+const sw = await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return !!(r&&(r.active||r.installing||r.waiting));});
+console.log(JSON.stringify({ multiplayerEnabled:mpEnabled, devHooksStripped:devStripped, exploreWorldRenders:worldCanvas, serviceWorker:sw, errors }));
+await browser.close();

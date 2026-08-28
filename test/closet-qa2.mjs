@@ -1,0 +1,32 @@
+import puppeteer from "puppeteer-core";
+const CHROME = "/Users/neilbusque/.cache/puppeteer/chrome/mac_arm-149.0.7827.22/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const click = (p,s)=>p.evaluate(x=>document.querySelector(x)?.click(),s);
+const shown = (p,s)=>p.$eval(s,e=>!e.classList.contains("hidden")).catch(()=>false);
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args:["--use-gl=angle","--use-angle=swiftshader","--enable-webgl","--no-sandbox"] });
+const page = await browser.newPage(); await page.setViewport({width:760,height:760});
+const errors=[]; page.on("pageerror",e=>errors.push(e.message)); page.on("console",m=>{if(m.type()==="error")errors.push("c:"+m.text());});
+await page.goto("http://localhost:5173/",{waitUntil:"networkidle2"}); await sleep(400);
+await page.evaluate(()=>localStorage.setItem("bb_coins","200"));
+await page.reload({waitUntil:"networkidle2"}); await sleep(400);
+await page.type("#name-input","Stylo"); await click(page,"#btn-solo"); await sleep(2500);
+const portals = await page.evaluate(()=>window.__bbPortals);
+const closet = portals.find(p=>p.key==="closet");
+await page.evaluate((c)=>{ const p=window.__bbPlayer; p.pos.x=c.x; p.pos.z=c.z; }, closet);
+await sleep(800);
+const prompt = await page.$eval("#explore-prompt",e=>e.textContent).catch(()=>"");
+await click(page,"#explore-prompt"); await sleep(1000);
+const closetShown = await shown(page,"#closet");
+let coinsAfter="?", equipped="?";
+if (closetShown) {
+  await page.evaluate(()=>document.querySelectorAll(".cc-swatch")[1].click()); await sleep(300);
+  await page.evaluate(()=>{ const t=[...document.querySelectorAll(".ch-tile")].find(b=>b.dataset.h==="crown"); t&&t.click(); }); await sleep(400);
+  coinsAfter = await page.evaluate(()=>localStorage.getItem("bb_coins"));
+  equipped = await page.evaluate(()=>localStorage.getItem("bb_hat"));
+  await page.screenshot({ path:"/tmp/closet.png" });
+  await click(page,"#closet-done"); await sleep(2200);
+  await page.evaluate(()=>{ const p=window.__bbPlayer; if(p){p.pos.x=0;p.pos.z=-3;} }); await sleep(900);
+  await page.screenshot({ path:"/tmp/closet-avatar.png" });
+}
+console.log(JSON.stringify({ closetPad:closet, prompt, closetShown, coinsAfter, equippedHat:equipped, errors }));
+await browser.close();

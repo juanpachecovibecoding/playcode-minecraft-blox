@@ -1,0 +1,23 @@
+{
+  "name": "brainblox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BrainBlox - a Roblox-style 3D learning obby for kids, with private multiplayer rooms and voice chat.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1",
+    "vite": "^5.4.8",
+    "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.1.2"
+  }
+}

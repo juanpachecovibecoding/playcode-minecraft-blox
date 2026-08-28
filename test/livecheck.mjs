@@ -1,0 +1,22 @@
+import puppeteer from "puppeteer-core";
+const CHROME = "/Users/neilbusque/.cache/puppeteer/chrome/mac_arm-149.0.7827.22/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new",
+  args: ["--use-gl=angle","--use-angle=swiftshader","--enable-webgl","--ignore-gpu-blocklist","--no-sandbox"] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1100, height: 680 });
+const errors = [];
+page.on("pageerror", e => errors.push(e.message));
+page.on("console", m => { if (m.type()==="error") errors.push("console: "+m.text()); });
+await page.goto("https://neilbusque.github.io/brainblox/?v="+Date.now(), { waitUntil: "networkidle2", timeout: 30000 });
+await sleep(600);
+const mpEnabled = await page.$eval("#lobby-msg", e => e.textContent.trim()==="");
+const devHookStripped = await page.evaluate(() => typeof window.__bbPlayer === "undefined");
+await page.type("#name-input", "Live");
+await page.click("#btn-solo");
+await sleep(1500);
+await page.keyboard.down("w"); await sleep(500); await page.keyboard.up("w"); await sleep(700);
+const canvasOk = await page.$eval("#game-root canvas", c => c.width>0 && c.height>0).catch(()=>false);
+await page.screenshot({ path: "/tmp/bb-live-new.png" });
+console.log(JSON.stringify({ canvasOk, multiplayerEnabled: mpEnabled, devHooksStripped: devHookStripped, errors }));
+await browser.close();

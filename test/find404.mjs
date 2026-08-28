@@ -1,0 +1,12 @@
+import puppeteer from "puppeteer-core";
+const CHROME = "/Users/neilbusque/.cache/puppeteer/chrome/mac_arm-149.0.7827.22/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args: ["--no-sandbox"] });
+const page = await browser.newPage();
+const bad = [];
+page.on("response", (r) => { if (r.status() >= 400) bad.push(r.status() + " " + r.url()); });
+page.on("requestfailed", (r) => bad.push("FAIL " + r.url()));
+await page.goto("https://neilbusque.github.io/brainblox/?x="+Date.now(), { waitUntil:"networkidle2", timeout:30000 });
+await sleep(2000);
+console.log(JSON.stringify(bad, null, 2));
+await browser.close();
