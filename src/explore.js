@@ -433,16 +433,17 @@ export function startExplore(onEnter, opts = {}) {
     padMesh.receiveShadow = true;
     portalGroup.add(padMesh);
 
-    scene.add(portalGroup);
-    colliders.push(aabb(px, 2.5, pz, 4.2, 5.0, 1.6));
+    portalGroup.updateMatrixWorld(true);
+    const padWorld = new THREE.Vector3();
+    padMesh.getWorldPosition(padWorld);
 
-    const padWorldPos = new THREE.Vector3(0, 0.06, 2.2).applyMatrix4(portalGroup.matrixWorld);
     portals.push({
       key: z.key,
       name: z.name,
       emoji: z.emoji,
       color: z.color,
-      pos: { x: padWorldPos.x, z: padWorldPos.z },
+      pos: { x: padWorld.x, z: padWorld.z },
+      portalPos: { x: px, z: pz },
       group: portalGroup,
       energy: energyMesh
     });
@@ -489,12 +490,15 @@ export function startExplore(onEnter, opts = {}) {
   root.appendChild(enterBtn);
   let activePortal = null;
 
-  enterBtn.addEventListener("click", () => {
+  const handleEnter = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     if (!activePortal) return;
     sfx.click();
     destroy();
     if (onEnter) onEnter(activePortal.key);
-  });
+  };
+  enterBtn.addEventListener("click", handleEnter);
+  enterBtn.addEventListener("pointerdown", handleEnter);
 
   let alive = true, last = performance.now(), elapsed = 0, rafId = 0;
 
@@ -537,10 +541,12 @@ export function startExplore(onEnter, opts = {}) {
     let minPortalDist = 999;
     for (const p of portals) {
       p.energy.material.opacity = 0.7 + Math.sin(elapsed * 4 + p.pos.x) * 0.2;
-      const d = Math.hypot(player.pos.x - p.pos.x, player.pos.z - p.pos.z);
+      const dPad = Math.hypot(player.pos.x - p.pos.x, player.pos.z - p.pos.z);
+      const dPortal = Math.hypot(player.pos.x - p.portalPos.x, player.pos.z - p.portalPos.z);
+      const d = Math.min(dPad, dPortal);
       if (d < minPortalDist) {
         minPortalDist = d;
-        if (d < 2.6) nearestPortal = p;
+        if (d < 3.5) nearestPortal = p;
       }
     }
 
