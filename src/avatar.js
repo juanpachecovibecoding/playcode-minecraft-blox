@@ -1,4 +1,4 @@
-﻿// Minecraft Voxel Character (Steve / Alex blocky proportions)
+// Minecraft Voxel Character (Steve / Alex blocky proportions)
 // Sharp 90-degree boxy limbs, pixel-art facial textures, and stiff Minecraft-style limb swings.
 // API: { root, update, setBodyColor }.
 
@@ -188,19 +188,23 @@ export function createAvatar(bodyColor = 0x5cc6f0, name = "", hat = "none") {
     neutralExtras();
 
     if (anim === "run") {
-      const s = Math.sin(t * 12) * 0.95;
+      const s = Math.sin(t * 11) * 0.95;
       legL.rotation.x = s;
       legR.rotation.x = -s;
       armL.rotation.x = -s;
       armR.rotation.x = s;
-      torsoMesh.position.y = Math.abs(Math.sin(t * 12)) * 0.04;
+      armL.rotation.z = -0.06;
+      armR.rotation.z = 0.06;
+      torsoMesh.position.y = Math.abs(Math.sin(t * 11)) * 0.05;
+      head.position.y = 0.82 + Math.abs(Math.sin(t * 11)) * 0.02;
     } else if (anim === "jump") {
-      const e = 0.6;
-      legL.rotation.x = THREE.MathUtils.lerp(legL.rotation.x, -0.5, e);
+      const e = 0.4;
+      legL.rotation.x = THREE.MathUtils.lerp(legL.rotation.x, -0.45, e);
       legR.rotation.x = THREE.MathUtils.lerp(legR.rotation.x, 0.4, e);
-      armL.rotation.x = THREE.MathUtils.lerp(armL.rotation.x, -2.2, e);
-      armR.rotation.x = THREE.MathUtils.lerp(armR.rotation.x, -2.2, e);
+      armL.rotation.x = THREE.MathUtils.lerp(armL.rotation.x, -1.8, e);
+      armR.rotation.x = THREE.MathUtils.lerp(armR.rotation.x, -1.8, e);
       torsoMesh.position.y = 0;
+      head.position.y = 0.82;
     } else if (anim === "cheer") {
       armL.rotation.x = -2.6;
       armR.rotation.x = -2.6;
@@ -208,6 +212,7 @@ export function createAvatar(bodyColor = 0x5cc6f0, name = "", hat = "none") {
       legL.rotation.x = 0;
       legR.rotation.x = 0;
       torsoMesh.position.y = b * 0.1;
+      head.position.y = 0.82 + b * 0.04;
       root.rotation.z = Math.sin(t * 16) * 0.04;
     } else if (anim === "wave") {
       legL.rotation.x = 0;
@@ -242,9 +247,10 @@ export function createAvatar(bodyColor = 0x5cc6f0, name = "", hat = "none") {
       armR.rotation.x = THREE.MathUtils.lerp(armR.rotation.x, -1.55, 0.3);
       torsoMesh.position.y = Math.sin(t * 2) * 0.02;
     } else {
-      const e = 0.15;
+      const e = 0.2;
       for (const l of [legL, legR, armL, armR]) l.rotation.x = THREE.MathUtils.lerp(l.rotation.x, 0, e);
       torsoMesh.position.y = Math.sin(t * 2) * 0.02;
+      head.position.y = 0.82 + Math.sin(t * 2) * 0.01;
     }
 
     if (tag && camera) tag.quaternion.copy(camera.quaternion);
