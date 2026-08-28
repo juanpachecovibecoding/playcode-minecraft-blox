@@ -111,7 +111,8 @@ export function createScene3d(spawn, opts = {}) {
     }
     if (player.pos.y < -12) respawn(player, spawn);
 
-    const anim = emotes.tick(dt, moving);
+    emotes.tick(dt, moving);
+    const anim = emotes.current() || player.anim;
     avatar.root.position.set(player.pos.x, player.pos.y + 0.15, player.pos.z);
     avatar.root.rotation.y = player.facing;
     avatar.update(anim, dt, camera.cam);
