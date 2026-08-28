@@ -1,10 +1,9 @@
-// Decorative life for the world: drifting clouds, low-poly toon trees + balloons
-// near checkpoints, a floating coin trail, plus transient win-confetti and
-// correct-answer sparkles. All decoration, no collision. Shares geometry and
-// materials per type and scales counts down on low-end devices via `density`.
+﻿// Minecraft Voxel Props & Collectibles
+// Drifting flat voxel clouds, 3D rotating Emeralds / Gold Ingots,
+// voxel oak trees & torches near checkpoints, and sparkle bursts.
 
 import * as THREE from "three";
-import { toonMat, roundedGeo, markBloom } from "./gfx.js";
+import { getBlockMaterial, createVoxelBlock, markBloom } from "./gfx.js";
 
 export function createProps(scene, world, density = 1) {
   const group = new THREE.Group();
@@ -13,42 +12,40 @@ export function createProps(scene, world, density = 1) {
   const clouds = [];
   const coins = [];
   const balloons = [];
-  const transients = []; // { obj, age, ttl, tick }
+  const transients = [];
 
-  // ---- clouds (icosahedron lumps) ----
-  const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const cloudGeo = new THREE.IcosahedronGeometry(1, 0);
-  const cloudCount = Math.round(16 * density);
+  // ---- 1. Flat Voxel Clouds ----
+  const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  const cloudCount = Math.round(14 * density);
   for (let i = 0; i < cloudCount; i++) {
-    const cluster = new THREE.Group();
-    const lumps = 3 + (i % 2);
-    for (let j = 0; j < lumps; j++) {
-      const m = new THREE.Mesh(cloudGeo, cloudMat);
-      m.position.set(j * 1.1 - lumps * 0.5, (j % 2) * 0.3, (j % 2) * 0.4);
-      m.scale.set(1 + (j % 2) * 0.5, 0.7, 1 + (j % 2) * 0.4);
-      cluster.add(m);
-    }
-    cluster.position.set((i * 11) % 60 - 30, 7 + (i % 4) * 2.5, i * 9 - 6);
-    cluster.userData.speed = 0.3 + (i % 3) * 0.15;
-    group.add(cluster);
-    clouds.push(cluster);
+    const cw = 12 + (i % 3) * 6;
+    const cd = 10 + (i % 2) * 8;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(cw, 2, cd), cloudMat);
+    m.position.set((i * 13) % 70 - 35, 12 + (i % 3) * 3, i * 11 - 10);
+    m.userData.speed = 0.4 + (i % 3) * 0.2;
+    group.add(m);
+    clouds.push(m);
   }
 
-  // ---- collectible coin trail between checkpoints ----
-  const coinMat = new THREE.MeshBasicMaterial({ color: 0xffcf3a });
-  const coinGeo = new THREE.TorusGeometry(0.24, 0.1, 8, 16);
+  // ---- 2. Collectible 3D Minecraft Emeralds between checkpoints ----
+  const emeraldMat = new THREE.MeshLambertMaterial({
+    color: 0x17dd62,
+    emissive: new THREE.Color(0x0a6b2c),
+    emissiveIntensity: 0.4
+  });
+  const emeraldGeo = new THREE.OctahedronGeometry(0.32, 0);
+
   {
     const cps = world.checkpoints;
     const per = density > 0.5 ? 3 : 2;
-    // a checkpoint's pos.y is ring height (~ surface + 1); the player's chest sits
-    // near there, so coins placed at that height + a touch are easy to grab.
     for (let i = 0; i < cps.length; i++) {
       const a = i === 0 ? { x: world.spawn.x, y: 1, z: world.spawn.z } : cps[i - 1].pos;
       const b = cps[i].pos;
       for (let k = 1; k <= per; k++) {
         const t = k / (per + 1);
-        const coin = new THREE.Mesh(coinGeo, coinMat);
-        coin.position.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t + 0.2, a.z + (b.z - a.z) * t);
+        const coin = new THREE.Mesh(emeraldGeo, emeraldMat);
+        coin.scale.set(1.0, 1.4, 0.7); // Emerald gem shape
+        coin.position.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t + 0.25, a.z + (b.z - a.z) * t);
         coin.userData.phase = i + k;
         coin.userData.collected = false;
         markBloom(coin);
@@ -58,28 +55,24 @@ export function createProps(scene, world, density = 1) {
     }
   }
 
-  // ---- trees + balloons near each checkpoint ----
-  const trunkMat = toonMat(0x9a6b4f);
-  const trunkGeo = new THREE.CylinderGeometry(0.16, 0.22, 1, 7);
-  const leafGeoA = new THREE.IcosahedronGeometry(0.7, 0);
-  const leafGeoB = new THREE.IcosahedronGeometry(0.5, 0);
-  const leafMatA = toonMat(0x6bd66a, { flatShading: true });
-  const leafMatB = toonMat(0x4fb85c, { flatShading: true });
-  const balloonGeo = new THREE.SphereGeometry(0.34, 12, 12);
-  const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
-  const lineGeo = new THREE.CylinderGeometry(0.01, 0.01, 1.2, 4);
-
-  function tree(x, y, z, s) {
+  // ---- 3. Minecraft Oak Trees near checkpoints ----
+  function makeVoxelTree(x, y, z, s = 1) {
     const tg = new THREE.Group();
-    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-    trunk.position.y = 0.5;
-    trunk.castShadow = true;
-    const l1 = new THREE.Mesh(leafGeoA, leafMatA);
-    l1.position.y = 1.25;
-    l1.castShadow = true;
-    const l2 = new THREE.Mesh(leafGeoB, leafMatB);
-    l2.position.set(0.2, 1.7, 0.1);
-    tg.add(trunk, l1, l2);
+    // 3 logs
+    for (let ly = 0; ly < 3; ly++) {
+      const log = createVoxelBlock("log", 0.6, 0.6, 0.6);
+      log.position.y = ly * 0.6 + 0.3;
+      tg.add(log);
+    }
+    // Leaf block
+    const leafMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(2.0, 1.4, 2.0),
+      getBlockMaterial("oak_leaves")
+    );
+    leafMesh.position.y = 2.4;
+    leafMesh.castShadow = true;
+    tg.add(leafMesh);
+
     tg.position.set(x, y, z);
     tg.scale.setScalar(s);
     group.add(tg);
@@ -87,45 +80,37 @@ export function createProps(scene, world, density = 1) {
 
   for (const cp of world.checkpoints) {
     if (density > 0.5) {
-      tree(-3.0, cp.pos.y - 1, cp.pos.z, 0.9 + (cp.index % 2) * 0.3);
-      tree(3.0, cp.pos.y - 1, cp.pos.z - 0.6, 0.8 + (cp.index % 3) * 0.2);
-    }
-    // two balloons in the section color
-    const hue = [0xff8e72, 0x5fc6f0, 0x5fd69a, 0xffd45e, 0xbfa1ff, 0xff94bc][cp.index % 6];
-    for (const sx of [-1.4, 1.4]) {
-      const bg = new THREE.Group();
-      const line = new THREE.Mesh(lineGeo, lineMat);
-      line.position.y = 0.6;
-      const ball = new THREE.Mesh(balloonGeo, toonMat(hue));
-      ball.scale.y = 1.2;
-      ball.position.y = 1.5;
-      bg.add(line, ball);
-      bg.position.set(cp.pos.x + sx, cp.pos.y, cp.pos.z + 0.5);
-      bg.userData.phase = cp.index + sx;
-      group.add(bg);
-      balloons.push(bg);
+      makeVoxelTree(-3.5, cp.pos.y - 1, cp.pos.z, 0.9 + (cp.index % 2) * 0.2);
+      makeVoxelTree(3.5, cp.pos.y - 1, cp.pos.z - 0.6, 0.85 + (cp.index % 3) * 0.2);
     }
   }
 
-  // ---- power-up pickups (emoji sprites that float on the path) ----
+  // ---- 4. Power-up Pickups ----
   const powerupItems = [];
   function emojiSprite(char, size = 1.1) {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 128;
     const ctx = canvas.getContext("2d");
-    ctx.font = "96px serif";
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(8, 8, 112, 112);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, 112, 112);
+    ctx.font = "80px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(char, 64, 72);
+    ctx.fillText(char, 64, 68);
     const tex = new THREE.CanvasTexture(canvas);
+    tex.magFilter = THREE.NearestFilter;
     tex.colorSpace = THREE.SRGBColorSpace;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
     spr.scale.set(size, size, 1);
     return spr;
   }
+
   {
     const cps = world.checkpoints;
-    // a power-up roughly every other section, alternating type
     const defs = [
       { type: "doublejump", char: "🎈", icon: "🎈", label: "Double Jump" },
       { type: "speed", char: "⚡", icon: "⚡", label: "Speed Boost" },
@@ -142,7 +127,6 @@ export function createProps(scene, world, density = 1) {
     }
   }
 
-  // ---- collection ----
   function near(pos, obj, r = 1.5) {
     return (
       Math.abs(pos.x - obj.position.x) < r &&
@@ -151,7 +135,6 @@ export function createProps(scene, world, density = 1) {
     );
   }
 
-  // collect any coins the player is touching; returns the count grabbed
   function collectCoins(pos) {
     let got = 0;
     for (const c of coins) {
@@ -166,7 +149,6 @@ export function createProps(scene, world, density = 1) {
     return got;
   }
 
-  // collect a power-up if touched; returns its def ({type,icon,label}) or null
   function collectPowerup(pos) {
     for (const p of powerupItems) {
       if (p.userData.collected) continue;
@@ -180,7 +162,6 @@ export function createProps(scene, world, density = 1) {
     return null;
   }
 
-  // restore all coins + power-ups for a fresh run
   function resetCollectibles() {
     for (const c of coins) {
       c.userData.collected = false;
@@ -192,7 +173,7 @@ export function createProps(scene, world, density = 1) {
     }
   }
 
-  // ---- transient bursts ----
+  // ---- 5. Sparkle Particle Bursts ----
   function spawnSparkle(pos) {
     const n = 14;
     const positions = new Float32Array(n * 3);
@@ -202,11 +183,20 @@ export function createProps(scene, world, density = 1) {
       positions[i * 3 + 1] = pos.y;
       positions[i * 3 + 2] = pos.z;
       const a = (i / n) * Math.PI * 2;
-      vel.push(new THREE.Vector3(Math.cos(a) * 2, 3 + Math.random() * 2, Math.sin(a) * 2));
+      vel.push(new THREE.Vector3(Math.cos(a) * 2.2, 2.5 + Math.random() * 2, Math.sin(a) * 2.2));
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.22, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const pts = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        color: 0x17dd62,
+        size: 0.28,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
     markBloom(pts);
     group.add(pts);
     transients.push({
@@ -225,10 +215,10 @@ export function createProps(scene, world, density = 1) {
   }
 
   function spawnConfetti(center) {
-    const colors = [0xff8e72, 0x5fc6f0, 0x5fd69a, 0xffd45e, 0xbfa1ff, 0xff94bc];
+    const colors = [0x17dd62, 0xf8d93c, 0x5fedd9, 0xe83b3b, 0xa63df2, 0xffffff];
     const n = Math.round(50 * density);
-    const geo = new THREE.PlaneGeometry(0.18, 0.18);
-    const inst = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, vertexColors: false }), n);
+    const geo = new THREE.PlaneGeometry(0.2, 0.2);
+    const inst = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), n);
     const dummy = new THREE.Object3D();
     const data = [];
     const col = new THREE.Color();
@@ -265,20 +255,17 @@ export function createProps(scene, world, density = 1) {
   function update(dt, t) {
     for (const c of clouds) {
       c.position.x += c.userData.speed * dt;
-      if (c.position.x > 36) c.position.x = -36;
+      if (c.position.x > 38) c.position.x = -38;
     }
     for (const coin of coins) {
       if (!coin.visible) continue;
-      coin.rotation.y += dt * 2.5;
-      coin.position.y += Math.sin(t * 2 + coin.userData.phase) * dt * 0.4;
+      coin.rotation.y += dt * 3.0;
+      coin.position.y += Math.sin(t * 2.5 + coin.userData.phase) * dt * 0.4;
     }
     for (const p of powerupItems) {
       if (!p.visible) continue;
       p.position.y = p.userData.baseY + Math.sin(t * 2 + p.userData.phase) * 0.18;
       p.material.rotation = Math.sin(t * 2) * 0.2;
-    }
-    for (const b of balloons) {
-      b.rotation.z = Math.sin(t * 1.3 + b.userData.phase) * 0.12;
     }
     for (let i = transients.length - 1; i >= 0; i--) {
       const tr = transients[i];

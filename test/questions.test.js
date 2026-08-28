@@ -42,7 +42,7 @@ describe("getQuestion", () => {
     let counted = 0;
     for (let seed = 1; seed <= 2000 && counted < 200; seed++) {
       const q = getQuestion(2, mulberry32(seed));
-      if (q.topic !== "Counting") continue;
+      if (q.topic !== "Contar") continue;
       counted++;
       expect(q.picCount).toBeGreaterThanOrEqual(2);
       expect(Number(q.choices[q.correctIndex])).toBe(q.picCount);
@@ -56,7 +56,7 @@ describe("getQuestion", () => {
     let pics = 0;
     for (let seed = 1; seed <= 3000 && pics < 300; seed++) {
       const q = getQuestion(3, mulberry32(seed));
-      if (q.topic !== "Pictures") continue;
+      if (q.topic !== "Imágenes") continue;
       pics++;
       expect(q.correctIndex).toBeGreaterThanOrEqual(0);
       expect(q.correctIndex).toBeLessThan(q.choices.length);
@@ -77,7 +77,7 @@ describe("getQuestion", () => {
     let mathSeen = 0;
     for (let seed = 1; seed <= 1000 && mathSeen < 300; seed++) {
       const q = getQuestion(5, mulberry32(seed));
-      if (q.topic !== "Math") continue;
+      if (q.topic !== "Matemáticas") continue;
       mathSeen++;
       const m = q.prompt.match(/^(\d+)\s*([+−×])\s*(\d+)\s*=/);
       expect(m).toBeTruthy();
